@@ -11,7 +11,7 @@ use k256::ecdsa::{RecoveryId, Signature, SigningKey, VerifyingKey};
 use ripemd::Ripemd160;
 use sha2::{Digest, Sha256};
 
-use crate::components::{Credential, Cred, ShortId};
+use crate::components::{Cred, Credential, ShortId};
 use crate::pchain::{Tx, UnsignedTx};
 
 /// Why a signature could not be made or read.
@@ -46,7 +46,10 @@ pub fn sign_hash(key: &SigningKey, hash: &[u8; 32]) -> [u8; 65] {
         .expect("a 32-byte prehash is always accepted");
     // k256 already returns low-S; normalize anyway, flipping v with s.
     let (sig, recid) = match sig.normalize_s() {
-        Some(low) => (low, RecoveryId::from_byte(recid.to_byte() ^ 1).expect("0 or 1")),
+        Some(low) => (
+            low,
+            RecoveryId::from_byte(recid.to_byte() ^ 1).expect("0 or 1"),
+        ),
         None => (sig, recid),
     };
     let mut out = [0u8; 65];
@@ -66,7 +69,8 @@ pub fn recover(hash: &[u8; 32], sig: &[u8; 65]) -> Result<VerifyingKey, SignErro
         v @ (0 | 1) => RecoveryId::from_byte(v).expect("0 or 1"),
         _ => return Err(SignError::BadSignature),
     };
-    VerifyingKey::recover_from_prehash(hash, &signature, recid).map_err(|_| SignError::Unrecoverable)
+    VerifyingKey::recover_from_prehash(hash, &signature, recid)
+        .map_err(|_| SignError::Unrecoverable)
 }
 
 /// Signs `unsigned`: one credential per entry of `signers`, in input order,
@@ -92,7 +96,11 @@ pub fn address(key: &VerifyingKey) -> ShortId {
 
 /// Formats an address as Avalanche shows it, e.g. `P-avax1…` for chain
 /// alias `P` and HRP `avax` (Mainnet) or `fuji` (Fuji).
-pub fn format_address(chain: &str, hrp: &str, addr: &ShortId) -> Result<String, bech32::EncodeError> {
+pub fn format_address(
+    chain: &str,
+    hrp: &str,
+    addr: &ShortId,
+) -> Result<String, bech32::EncodeError> {
     let hrp = Hrp::parse(hrp).expect("a valid human-readable part");
     Ok(format!("{chain}-{}", bech32::encode::<Bech32>(hrp, addr)?))
 }

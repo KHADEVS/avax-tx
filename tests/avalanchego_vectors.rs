@@ -16,7 +16,11 @@ fn round_trip<T: Codec + std::fmt::Debug>(bytes: &[u8], type_id: impl Fn(&T) -> 
     let value: T = codec::from_bytes(bytes).unwrap_or_else(|e| panic!("{label}: {e}"));
     let expected_id = u32::from_be_bytes(bytes[2..6].try_into().unwrap());
     assert_eq!(type_id(&value), expected_id, "{label}: type ID");
-    assert_eq!(codec::to_bytes(&value), bytes, "{label}: re-encoding differs");
+    assert_eq!(
+        codec::to_bytes(&value),
+        bytes,
+        "{label}: re-encoding differs"
+    );
 }
 
 #[test]
@@ -26,7 +30,12 @@ fn every_avalanchego_vector_round_trips() {
     let (mut txs, mut blocks) = (0, 0);
     for v in &vectors {
         let bytes = hex::decode(v["hex"].as_str().unwrap()).unwrap();
-        let label = format!("{}:{} {}", v["file"].as_str().unwrap(), v["line"], v["var"].as_str().unwrap());
+        let label = format!(
+            "{}:{} {}",
+            v["file"].as_str().unwrap(),
+            v["line"],
+            v["var"].as_str().unwrap()
+        );
         if v["file"] == "serialization_test.go" {
             round_trip::<Block>(&bytes, Block::type_id, &label);
             blocks += 1;
@@ -60,8 +69,14 @@ fn trailing_bytes_and_other_versions_are_rejected() {
     let bytes = hex::decode(vectors()[0]["hex"].as_str().unwrap()).unwrap();
     let mut longer = bytes.clone();
     longer.push(0);
-    assert_eq!(UnsignedTx::from_bytes(&longer), Err(codec::Error::TrailingBytes(1)));
+    assert_eq!(
+        UnsignedTx::from_bytes(&longer),
+        Err(codec::Error::TrailingBytes(1))
+    );
     let mut v1 = bytes;
     v1[1] = 1;
-    assert_eq!(UnsignedTx::from_bytes(&v1), Err(codec::Error::UnsupportedVersion(1)));
+    assert_eq!(
+        UnsignedTx::from_bytes(&v1),
+        Err(codec::Error::UnsupportedVersion(1))
+    );
 }
